@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
+import Avatar from './Avatar'
 
 export default function Account({ session }) {
   const [loading, setLoading] = useState(true)
@@ -8,35 +9,28 @@ export default function Account({ session }) {
   const [avatar_url, setAvatarUrl] = useState(null)
 
   useEffect(() => {
-    let ignore = false
     async function getProfile() {
       setLoading(true)
       const { user } = session
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('profiles')
         .select(`username, website, avatar_url`)
         .eq('id', user.id)
         .single()
 
-      if (!ignore) {
-        if (error) {
-          console.warn(error)
-        } else if (data) {
-          setUsername(data.username)
-          setWebsite(data.website)
-          setAvatarUrl(data.avatar_url)
-        }
+      if (error) {
+        console.warn(error)
+      } else if (data) {
+        setUsername(data.username)
+        setWebsite(data.website)
+        setAvatarUrl(data.avatar_url)
       }
 
       setLoading(false)
     }
 
     getProfile()
-
-    return () => {
-      ignore = true
-    }
   }, [session])
 
   async function updateProfile(event, avatarUrl) {
@@ -53,7 +47,7 @@ export default function Account({ session }) {
       updated_at: new Date(),
     }
 
-    const { error } = await supabase.from('profiles').upsert(updates)
+    let { error } = await supabase.from('profiles').upsert(updates)
 
     if (error) {
       alert(error.message)
@@ -65,6 +59,13 @@ export default function Account({ session }) {
 
   return (
     <form onSubmit={updateProfile} className="form-widget">
+      <Avatar
+        url={avatar_url}
+        size={150}
+        onUpload={(event, url) => {
+          updateProfile(event, url)
+        }}
+      />
       <div>
         <label htmlFor="email">Email</label>
         <input id="email" type="text" value={session.user.email} disabled />
@@ -90,7 +91,7 @@ export default function Account({ session }) {
       </div>
 
       <div>
-        <button className="button block primary " type="submit" disabled={loading}>
+        <button className="button block primary" type="submit" disabled={loading}>
           {loading ? 'Loading ...' : 'Update'}
         </button>
       </div>
